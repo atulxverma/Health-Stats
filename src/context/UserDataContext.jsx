@@ -1,51 +1,67 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useUser } from "@clerk/clerk-react";
 
 const UserDataContext = createContext();
 
 export const useUserData = () => useContext(UserDataContext);
 
 export const UserDataProvider = ({ children }) => {
+  const { user, isLoaded } = useUser();
+
+  // 🔑 LOGIC CHANGE: Agar user hai toh ID lo, nahi toh "guest" use karo
+  const userId = user ? user.id : "guest_user";
+
   const [goals, setGoals] = useState({
     stepsGoal: 8000,
-    waterGoal: 3000, 
+    waterGoal: 3000,
     caloriesGoal: 2000,
   });
 
   const [dailyStats, setDailyStats] = useState({
-    steps: 2500,
-    calories: 450,
-    water: 800,
+    steps: 0,
+    calories: 0,
+    water: 0,
     sleep: 6,
     heartRate: 75,
   });
 
   const [workouts, setWorkouts] = useState([]);
 
+  // 1️⃣ Load Data (Guest ya User)
   useEffect(() => {
-    const savedGoals = JSON.parse(localStorage.getItem("goals"));
-    const savedStats = JSON.parse(localStorage.getItem("dailyStats"));
-    const savedWorkouts = JSON.parse(localStorage.getItem("workouts"));
+    if (isLoaded) { // Wait for Clerk to check if user exists
+      const savedGoals = JSON.parse(localStorage.getItem(`goals_${userId}`));
+      const savedStats = JSON.parse(localStorage.getItem(`stats_${userId}`));
+      const savedWorkouts = JSON.parse(localStorage.getItem(`workouts_${userId}`));
 
-    if (savedGoals) setGoals(savedGoals);
-    if (savedStats) setDailyStats(savedStats);
-    if (savedWorkouts) setWorkouts(savedWorkouts);
-  }, []);
+      if (savedGoals) setGoals(savedGoals);
+      // Agar guest hai aur naya hai, toh default rehne do, purana data mat dikhao
+      else if (userId !== "guest_user") setGoals({ stepsGoal: 8000, waterGoal: 3000, caloriesGoal: 2000 });
+      
+      if (savedStats) setDailyStats(savedStats);
+      else setDailyStats({ steps: 0, calories: 0, water: 0, sleep: 6, heartRate: 75 });
+      
+      if (savedWorkouts) setWorkouts(savedWorkouts);
+      else setWorkouts([]);
+    }
+  }, [isLoaded, userId]);
+
+  // 2️⃣ Save Data
+  useEffect(() => {
+    if (isLoaded) localStorage.setItem(`goals_${userId}`, JSON.stringify(goals));
+  }, [goals, userId, isLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("goals", JSON.stringify(goals));
-  }, [goals]);
+    if (isLoaded) localStorage.setItem(`stats_${userId}`, JSON.stringify(dailyStats));
+  }, [dailyStats, userId, isLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("dailyStats", JSON.stringify(dailyStats));
-  }, [dailyStats]);
+    if (isLoaded) localStorage.setItem(`workouts_${userId}`, JSON.stringify(workouts));
+  }, [workouts, userId, isLoaded]);
 
-  useEffect(() => {
-    localStorage.setItem("workouts", JSON.stringify(workouts));
-  }, [workouts]);
-
+  // ... (Baaki functions same rahenge: addWorkout, deleteWorkout etc.)
   const addWorkout = (workout) => {
     setWorkouts((prev) => [...prev, { id: Date.now(), ...workout }]);
-    // Optional: Auto-add calories to daily stats when workout is added
     updateDailyStats({ calories: dailyStats.calories + Number(workout.calories) });
   };
 
@@ -66,16 +82,11 @@ export const UserDataProvider = ({ children }) => {
   const updateDailyStats = (newStats) => {
     setDailyStats((prev) => ({ ...prev, ...newStats }));
   };
+  // ... (End of functions)
 
   const value = {
-    goals,
-    dailyStats,
-    workouts,
-    addWorkout,
-    deleteWorkout,
-    updateWorkout,
-    updateGoals,
-    updateDailyStats,
+    goals, dailyStats, workouts,
+    addWorkout, deleteWorkout, updateWorkout, updateGoals, updateDailyStats,
   };
 
   return (

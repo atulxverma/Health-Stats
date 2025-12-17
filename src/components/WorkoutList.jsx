@@ -15,7 +15,7 @@ export default function WorkoutList({ workouts, onDelete }) {
           </div>
           <button 
             onClick={() => onDelete(w.id)}
-            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-colors"
+            className=" h-11 w-11 text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-colors"
           >
             ✕
           </button>
