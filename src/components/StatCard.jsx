@@ -1,28 +1,31 @@
 import React from "react";
-import { calculatePercentage } from "../utils/calculateProgress";
+import { motion } from "framer-motion";
 
-const StatCard = ({ title, value, goal, unit = "" }) => {
-  const percentage = calculatePercentage(value, goal);
-
+const StatCard = ({ title, value, unit, icon: Icon, color, trend }) => {
   return (
-    <div className="bg-white shadow-sm rounded-xl p-6 border border-gray-100 hover:shadow-md transition-shadow">
-      <h3 className="text-gray-500 font-medium mb-2">{title}</h3>
+    <motion.div 
+      whileHover={{ y: -5 }}
+      className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between h-full"
+    >
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-3 rounded-2xl text-white shadow-md ${color}`}>
+          <Icon size={24} />
+        </div>
+        {trend && (
+          <div className={`text-xs font-bold px-2 py-1 rounded-full ${trend > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+            {trend > 0 ? '+' : ''}{trend}%
+          </div>
+        )}
+      </div>
       
-      <div className="flex items-baseline gap-1 mb-3">
-        <span className="text-2xl font-bold text-gray-800">{value}</span>
-        <span className="text-sm text-gray-400">/ {goal} {unit}</span>
+      <div>
+        <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">{title}</p>
+        <div className="flex items-baseline gap-1">
+          <h3 className="text-3xl font-black text-slate-900">{value}</h3>
+          <span className="text-sm font-medium text-slate-400">{unit}</span>
+        </div>
       </div>
-
-      <div className="w-full bg-gray-100 rounded-full h-2.5">
-        <div
-          className={`h-2.5 rounded-full transition-all duration-1000 ${
-            percentage >= 100 ? 'bg-green-500' : 'bg-blue-500'
-          }`}
-          style={{ width: `${percentage}%` }}
-        ></div>
-      </div>
-      <p className="text-xs text-gray-400 mt-2 text-right">{percentage}%</p>
-    </div>
+    </motion.div>
   );
 };
 
