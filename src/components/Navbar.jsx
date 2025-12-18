@@ -1,48 +1,86 @@
 import { Link, useLocation } from "react-router-dom";
 import { UserButton, useUser } from "@clerk/clerk-react";
+import { LayoutDashboard, Dumbbell, Utensils, User, LogIn, Home } from "lucide-react";
 
 export default function Navbar() {
   const location = useLocation();
-  const { isSignedIn, user } = useUser(); // Check karo banda logged in hai ya nahi
-  
-  const linkClasses = (path) => 
-    `px-4 py-2 rounded-md font-medium transition-colors ${
-      location.pathname === path 
-        ? "bg-blue-600 text-white" 
-        : "text-gray-600 hover:bg-gray-200"
-    }`;
+  const { isSignedIn } = useUser();
+
+  // Mobile Bottom Bar Item Component
+  const NavItem = ({ to, icon: Icon }) => {
+    const isActive = location.pathname === to;
+    return (
+      <Link to={to} className="relative group flex flex-col items-center justify-center p-2">
+        <div className={`p-2 rounded-xl transition-all duration-300 ${isActive ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "text-slate-400 group-hover:bg-slate-100 group-hover:text-indigo-500"}`}>
+            <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+        </div>
+      </Link>
+    );
+  };
 
   return (
-    <nav className="bg-white shadow-sm p-4 mb-6 sticky top-0 z-50">
-      <div className="container mx-auto flex flex-wrap justify-between items-center">
-        <h1 className="text-xl font-bold text-blue-600 mr-8">
-          <Link to="/">Health Stats</Link>
-        </h1>
+    <>
+      {/* 
+         --- DESKTOP TOP BAR --- 
+         Full width, Fixed Position, Glass Effect
+      */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-white/60 backdrop-blur-md border-b border-white/20 transition-all duration-300">
         
-        <div className="flex gap-2 overflow-x-auto items-center">
-          <Link to="/" className={linkClasses("/")}>Dashboard</Link>
-          <Link to="/workouts" className={linkClasses("/workouts")}>Workouts</Link>
-          <Link to="/nutrition" className={linkClasses("/nutrition")}>Nutrition</Link>
-          <Link to="/profile" className={linkClasses("/profile")}>Profile</Link>
-          <Link to="/progress"  className={linkClasses("/progress")}>Progress</Link>
-        </div>
+        {/* Container centers content but allows background to stretch full width */}
+        <div className="container mx-auto px-6 py-4 max-w-7xl flex justify-between items-center">
+          
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2 group">
+              <div className="bg-gradient-to-tr from-indigo-600 to-blue-600 w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform">H</div>
+              <span className="font-bold text-xl tracking-tight text-slate-800">Health<span className="text-indigo-600">Tracker</span></span>
+          </Link>
 
-        <div className="flex items-center gap-4 ml-auto">
-            {/* LOGIC: Agar Signed In hai toh Profile, nahi toh Login Button */}
-            {isSignedIn ? (
+          {/* Desktop Links (Center Pill) */}
+          <div className="hidden md:flex items-center gap-1 bg-slate-100/50 px-2 py-1.5 rounded-full border border-white/50">
+            <Link 
+              to={isSignedIn ? "/dashboard" : "/"} 
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                location.pathname === (isSignedIn ? '/dashboard' : '/') 
+                  ? 'bg-white text-indigo-600 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              {isSignedIn ? 'Dashboard' : 'Home'}
+            </Link>
+            
+            {isSignedIn && (
               <>
-                <span className="text-sm text-gray-500 hidden md:block">Hi, {user.firstName}</span>
-                <UserButton afterSignOutUrl="/" />
+                <Link to="/workouts" className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${location.pathname === '/workouts' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>Workouts</Link>
+                <Link to="/nutrition" className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${location.pathname === '/nutrition' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>Nutrition</Link>
+                <Link to="/profile" className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${location.pathname === '/profile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}>Profile</Link>
               </>
-            ) : (
-              <Link to="/sign-in">
-                <button className="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition">
-                  Sign In
-                </button>
-              </Link>
             )}
+          </div>
+
+          {/* Right Side Actions */}
+          <div className="flex items-center gap-4">
+              {isSignedIn ? (
+                <UserButton afterSignOutUrl="/" />
+              ) : (
+                <Link to="/sign-in" className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-black transition-all shadow-lg hover:shadow-xl">
+                  <LogIn size={16} /> <span className="hidden sm:inline">Sign In</span>
+                </Link>
+              )}
+          </div>
         </div>
+      </nav>
+
+      {/* 
+         --- MOBILE BOTTOM BAR --- 
+         Visible only on small screens
+      */}
+      <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl flex justify-around p-2 z-50">
+        <NavItem to="/" icon={Home} />
+        {isSignedIn && <NavItem to="/dashboard" icon={LayoutDashboard} />}
+        {isSignedIn && <NavItem to="/workouts" icon={Dumbbell} />}
+        {isSignedIn && <NavItem to="/nutrition" icon={Utensils} />}
+        {isSignedIn && <NavItem to="/profile" icon={User} />}
       </div>
-    </nav>
+    </>
   );
 }
