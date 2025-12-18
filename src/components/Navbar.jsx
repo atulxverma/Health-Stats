@@ -32,7 +32,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
               <div className="bg-gradient-to-tr from-indigo-600 to-blue-600 w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform">H</div>
-              <span className="font-bold text-xl tracking-tight text-slate-800">Health<span className="text-indigo-600">Tracker</span></span>
+              <span className="font-bold text-xl tracking-tight text-slate-800">Health<span className="text-indigo-600">Stats</span></span>
           </Link>
 
           {/* Desktop Links (Center Pill) */}

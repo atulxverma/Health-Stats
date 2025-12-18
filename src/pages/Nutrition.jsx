@@ -3,11 +3,11 @@ import { useUserData } from "../context/UserDataContext";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { 
-  Droplets, 
   Plus, 
+  X, 
+  Droplets, 
   Flame, 
   Utensils, 
-  X, 
   ChevronRight,
   Coffee,
   Sun,
@@ -19,218 +19,198 @@ export default function Nutrition() {
   const { dailyStats, updateDailyStats, goals } = useUserData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeMealType, setActiveMealType] = useState("Breakfast");
-  
-  // Local state for the form
   const [foodForm, setFoodForm] = useState({ name: "", calories: "" });
-
-  // Fake "Recent Meals" list (In a real app, this would be in Context/DB)
-  // We initialize it empty or with dummy data if you want to see UI immediately
   const [mealsLog, setMealsLog] = useState([]);
 
-  // --- 1. WATER LOGIC ---
+  // --- ACTIONS ---
   const addWater = (amount) => {
-    const newValue = dailyStats.water + amount;
-    updateDailyStats({ water: newValue });
-    
-    // Fun Toast messages based on amount
-    if (amount >= 500) toast.success("Hydration Boost! 💧");
-    else toast("Sip added", { icon: '💧' });
+    const currentWater = Number(dailyStats.water) || 0;
+    updateDailyStats({ water: currentWater + amount });
+    toast.success(amount > 300 ? "Hydration Boost! 💧" : "Sip Added 💧");
   };
 
-  // --- 2. FOOD LOGIC ---
   const handleAddFood = (e) => {
     e.preventDefault();
     if (!foodForm.name || !foodForm.calories) return;
 
-    // 1. Update Global Calories
-    const newCalories = dailyStats.calories + Number(foodForm.calories);
-    updateDailyStats({ calories: newCalories });
+    const currentCals = Number(dailyStats.calories) || 0;
+    const formCals = Number(foodForm.calories);
 
-    // 2. Add to Local Log for display
-    const newMeal = {
+    updateDailyStats({ calories: currentCals + formCals });
+
+    setMealsLog([{
       id: Date.now(),
       type: activeMealType,
       name: foodForm.name,
-      calories: Number(foodForm.calories)
-    };
-    setMealsLog([newMeal, ...mealsLog]);
+      calories: formCals,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }, ...mealsLog]);
 
-    toast.success(`${activeMealType} logged! 🥗`);
+    toast.success(`${activeMealType} logged`);
     setFoodForm({ name: "", calories: "" });
     setIsModalOpen(false);
   };
 
-  // Calculate percentages
-  const waterPercent = Math.min((dailyStats.water / goals.waterGoal) * 100, 100);
-  const caloriePercent = Math.min((dailyStats.calories / goals.caloriesGoal) * 100, 100);
+  // Calculations
+  const waterPercent = Math.min((Number(dailyStats.water) / (goals.waterGoal || 1)) * 100, 100);
+  const caloriePercent = Math.min((Number(dailyStats.calories) / (goals.caloriesGoal || 1)) * 100, 100);
 
-  // Helper for Meal Icons
   const getMealIcon = (type) => {
-    if (type === 'Breakfast') return <Coffee size={18} />;
-    if (type === 'Lunch') return <Sun size={18} />;
-    if (type === 'Dinner') return <Moon size={18} />;
+    if (type === "Breakfast") return <Coffee size={18} />;
+    if (type === "Lunch") return <Sun size={18} />;
+    if (type === "Dinner") return <Moon size={18} />;
     return <Cookie size={18} />;
   };
 
   return (
     <div className="container mx-auto max-w-6xl">
       
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-            <h1 className="text-3xl font-bold text-slate-900">Nutrition & Fuel</h1>
-            <p className="text-slate-500 mt-1">You are what you eat. Track your macros.</p>
-        </div>
-        <button 
-            onClick={() => { setActiveMealType("Breakfast"); setIsModalOpen(true); }}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all active:scale-95"
-        >
-            <Plus size={20} /> Log Meal
-        </button>
+      {/* 1. HEADER (Button Removed) */}
+      <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900">Nutrition</h1>
+          <p className="text-slate-500 mt-1">Track your fuel and hydration.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start"> 
+        {/* Added 'items-start' to prevent stretching height */}
         
-        {/* LEFT COLUMN: HYDRATION TANK */}
-        <div className="lg:col-span-1">
-            <div className="bg-gradient-to-b from-cyan-400 to-blue-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl shadow-cyan-200 h-full min-h-[400px] flex flex-col justify-between">
-                
-                {/* Background Waves (Decorative) */}
-                <div className="absolute inset-0 opacity-20">
-                     <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <path d="M0 50 Q 50 60 100 50 L 100 100 L 0 100 Z" fill="white" />
-                     </svg>
-                </div>
-
-                <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-                            <Droplets size={24} />
-                        </div>
-                        <h2 className="text-xl font-bold">Hydration</h2>
-                    </div>
-                    <p className="text-cyan-100 text-sm">Daily Goal: {goals.waterGoal}ml</p>
-                </div>
-
-                {/* The "Water Level" Visual */}
-                <div className="relative flex-grow flex items-center justify-center my-8">
-                    <div className="relative w-40 h-64 bg-white/10 border-2 border-white/30 rounded-3xl overflow-hidden backdrop-blur-sm">
-                         {/* Water Fill */}
-                         <motion.div 
-                            initial={{ height: 0 }}
-                            animate={{ height: `${waterPercent}%` }}
-                            transition={{ type: "spring", bounce: 0, duration: 1.5 }}
-                            className="absolute bottom-0 left-0 w-full bg-white/90"
-                         />
-                         {/* Text overlay */}
-                         <div className="absolute inset-0 flex items-center justify-center flex-col z-10 mix-blend-difference">
-                             <span className="text-4xl font-black text-cyan-500">{Math.round(waterPercent)}%</span>
-                         </div>
-                    </div>
-                </div>
-
-                {/* Quick Add Buttons */}
-                <div className="grid grid-cols-2 gap-3 relative z-10">
-                    <button onClick={() => addWater(250)} className="bg-white/20 hover:bg-white/30 backdrop-blur-md py-3 rounded-xl font-bold text-sm transition-all flex flex-col items-center">
-                        <span className="text-xs opacity-70">Glass</span>
-                        +250ml
-                    </button>
-                    <button onClick={() => addWater(500)} className="bg-white text-blue-600 hover:bg-cyan-50 py-3 rounded-xl font-bold text-sm transition-all shadow-lg flex flex-col items-center">
-                        <span className="text-xs opacity-70">Bottle</span>
-                        +500ml
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        {/* RIGHT COLUMN: MACROS & MEALS */}
+        {/* === LEFT: MAIN STATS (Bento) === */}
         <div className="lg:col-span-2 space-y-6">
             
-            {/* 1. MACRO SUMMARY CARD */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
-                <div>
-                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <Flame className="text-orange-500" /> Calories Consumed
-                    </h3>
-                    <div className="flex items-baseline gap-2 mt-2">
-                        <span className="text-4xl font-black text-slate-900">{dailyStats.calories}</span>
-                        <span className="text-slate-400 font-medium">/ {goals.caloriesGoal} kcal</span>
+            {/* CALORIE HERO CARD */}
+            <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/30 rounded-full blur-[80px] -z-10"></div>
+                
+                <div className="flex justify-between items-start mb-8">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Flame className="text-orange-500" fill="currentColor" size={20} />
+                            <h2 className="font-bold text-lg">Calories</h2>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-5xl font-black">{dailyStats.calories}</span>
+                            <span className="text-slate-400 font-medium">/ {goals.caloriesGoal} kcal</span>
+                        </div>
                     </div>
-                    {/* Progress Bar */}
-                    <div className="w-full md:w-64 bg-slate-100 h-3 rounded-full mt-4 overflow-hidden">
-                        <motion.div 
-                            initial={{ width: 0 }} animate={{ width: `${caloriePercent}%` }} 
-                            className="bg-orange-500 h-full rounded-full"
-                        />
+                    <div className="relative w-24 h-24">
+                        <svg className="w-full h-full -rotate-90">
+                            <circle cx="50%" cy="50%" r="40%" stroke="#334155" strokeWidth="8" fill="none" />
+                            <motion.circle 
+                                initial={{ strokeDashoffset: 251 }}
+                                animate={{ strokeDashoffset: 251 - (251 * caloriePercent) / 100 }}
+                                cx="50%" cy="50%" r="40%" 
+                                stroke="#F97316" strokeWidth="8" fill="none" 
+                                strokeDasharray="251" strokeLinecap="round" 
+                            />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center font-bold text-sm">
+                            {Math.round(caloriePercent)}%
+                        </div>
                     </div>
                 </div>
 
-                {/* Macro Rings (Visual Only - Simulated based on Calorie goal) */}
-                <div className="flex gap-4">
-                     <MacroRing label="Carbs" percent={Math.min(caloriePercent * 1.1, 100)} color="#F59E0B" amount="120g" />
-                     <MacroRing label="Protein" percent={Math.min(caloriePercent * 0.9, 100)} color="#6366F1" amount="85g" />
-                     <MacroRing label="Fat" percent={Math.min(caloriePercent * 0.6, 100)} color="#EF4444" amount="45g" />
+                <div className="grid grid-cols-3 gap-4">
+                    <MacroBar label="Protein" val="85g" color="bg-indigo-500" percent={60} />
+                    <MacroBar label="Carbs" val="120g" color="bg-blue-500" percent={45} />
+                    <MacroBar label="Fat" val="45g" color="bg-rose-500" percent={70} />
                 </div>
             </div>
 
-            {/* 2. MEAL JOURNAL */}
-            <div className="bg-slate-50 p-6 rounded-[2.5rem] border border-slate-100">
-                <h3 className="font-bold text-slate-800 mb-6 px-2">Today's Meals</h3>
-                
-                <div className="space-y-4">
-                    {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((mealType) => {
-                        // Filter logs for this meal type
-                        const items = mealsLog.filter(m => m.type === mealType);
-                        const totalCal = items.reduce((acc, curr) => acc + curr.calories, 0);
+            {/* MEAL LOG LIST */}
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-bold text-xl text-slate-800">Timeline</h3>
+                    <span className="text-xs font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">Today</span>
+                </div>
 
+                <div className="space-y-6">
+                    {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((type) => {
+                        const items = mealsLog.filter(m => m.type === type);
                         return (
-                            <div key={mealType} className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100/50">
-                                <div className="flex justify-between items-center mb-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-xl ${
-                                            mealType === 'Breakfast' ? 'bg-orange-50 text-orange-500' :
-                                            mealType === 'Lunch' ? 'bg-yellow-50 text-yellow-500' :
-                                            mealType === 'Dinner' ? 'bg-indigo-50 text-indigo-500' : 'bg-green-50 text-green-500'
-                                        }`}>
-                                            {getMealIcon(mealType)}
-                                        </div>
-                                        <span className="font-bold text-slate-700">{mealType}</span>
-                                    </div>
+                            <div key={type}>
+                                <div className="flex justify-between items-center mb-3 px-2">
+                                    <h4 className="font-bold text-slate-700 text-sm uppercase tracking-wider">{type}</h4>
                                     <button 
-                                        onClick={() => { setActiveMealType(mealType); setIsModalOpen(true); }}
-                                        className="w-8 h-8 rounded-full border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                                        onClick={() => { setActiveMealType(type); setIsModalOpen(true); }}
+                                        className="text-indigo-600 text-xs font-bold hover:underline"
                                     >
-                                        <Plus size={16} />
+                                        + Add Item
                                     </button>
                                 </div>
-
-                                {/* List of food items */}
+                                
                                 {items.length > 0 ? (
-                                    <div className="space-y-2 pl-12">
-                                        {items.map((item) => (
-                                            <div key={item.id} className="flex justify-between text-sm group">
-                                                <span className="text-slate-600 font-medium">{item.name}</span>
-                                                <span className="text-slate-400">{item.calories} kcal</span>
+                                    <div className="space-y-3">
+                                        {items.map(item => (
+                                            <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="bg-white p-2.5 rounded-xl text-slate-500 shadow-sm">
+                                                        {getMealIcon(type)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-slate-800 text-sm">{item.name}</p>
+                                                        <p className="text-xs text-slate-400">{item.time}</p>
+                                                    </div>
+                                                </div>
+                                                <span className="font-bold text-slate-900 text-sm">{item.calories} kcal</span>
                                             </div>
                                         ))}
-                                        <div className="border-t border-slate-50 mt-2 pt-2 flex justify-between text-xs font-bold text-slate-400 uppercase">
-                                            <span>Total</span>
-                                            <span>{totalCal} kcal</span>
-                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="pl-12 text-xs text-slate-300 italic">No food logged</div>
+                                    <div className="p-4 rounded-2xl border-2 border-dashed border-slate-100 text-center text-slate-400 text-sm">
+                                        No food logged
+                                    </div>
                                 )}
                             </div>
-                        );
+                        )
                     })}
                 </div>
             </div>
-
         </div>
+
+        {/* === RIGHT: HYDRATION (Sticky & Fixed Height) === */}
+        <div className="lg:col-span-1 sticky top-24"> 
+            {/* Added 'sticky top-24' so it follows scroll but doesn't grow */}
+            <div className="bg-white p-2 rounded-[2.5rem] border border-slate-100 shadow-xl h-[600px] flex flex-col">
+                <div className="bg-blue-50 rounded-[2rem] flex-grow p-6 flex flex-col relative overflow-hidden">
+                    
+                    <div className="flex items-center justify-between mb-6 relative z-10">
+                        <h3 className="font-bold text-blue-900 text-lg flex items-center gap-2">
+                            <Droplets size={20} fill="currentColor" /> Hydration
+                        </h3>
+                        <span className="text-xs font-bold text-blue-400 uppercase">{goals.waterGoal}ml Goal</span>
+                    </div>
+
+                    <div className="relative flex-grow flex items-center justify-center my-4">
+                        <div className="relative w-32 h-64 bg-white/40 border-4 border-white rounded-[3rem] overflow-hidden shadow-inner">
+                            <motion.div 
+                                animate={{ height: `${waterPercent}%` }}
+                                transition={{ type: "spring", bounce: 0, duration: 1.5 }}
+                                className="absolute bottom-0 w-full bg-blue-500 opacity-80"
+                            />
+                            <div className="absolute inset-0 flex flex-col justify-between py-6 px-4 opacity-30">
+                                {[...Array(5)].map((_, i) => <div key={i} className="w-full h-0.5 bg-blue-900/20"></div>)}
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center z-10 mix-blend-overlay">
+                                <span className="text-4xl font-black text-slate-900">{Math.round(waterPercent)}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mt-auto relative z-10">
+                        <button onClick={() => addWater(250)} className="bg-white hover:bg-blue-100 py-3 rounded-xl font-bold text-sm text-blue-600 transition-all shadow-sm">
+                            + 250ml
+                        </button>
+                        <button onClick={() => addWater(500)} className="bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-bold text-sm text-white transition-all shadow-md">
+                            + 500ml
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
       </div>
 
-      {/* FOOD MODAL */}
+      {/* MODAL */}
       <AnimatePresence>
         {isModalOpen && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
@@ -250,40 +230,43 @@ export default function Nutrition() {
                         <X size={20} />
                     </button>
                     
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="bg-orange-50 p-3 rounded-2xl text-orange-500">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
                             <Utensils size={24} />
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-slate-900">Add to {activeMealType}</h2>
-                            <p className="text-xs text-slate-400">What did you eat?</p>
+                            <p className="text-xs text-slate-500 font-medium">Log your food intake</p>
                         </div>
                     </div>
 
-                    <form onSubmit={handleAddFood} className="space-y-4">
-                        <div>
+                    <form onSubmit={handleAddFood} className="space-y-5">
+                        <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-700 ml-1">Food Name</label>
                             <input 
                                 autoFocus
-                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium mt-1" 
-                                placeholder="e.g. Avocado Toast" 
+                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none font-medium transition-all" 
+                                placeholder="e.g. Grilled Chicken" 
                                 value={foodForm.name} 
                                 onChange={e => setFoodForm({...foodForm, name: e.target.value})} 
                             />
                         </div>
-                        <div>
+                        <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-700 ml-1">Calories</label>
                             <input 
                                 type="number"
-                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium mt-1" 
-                                placeholder="350" 
+                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none font-medium transition-all" 
+                                placeholder="450" 
                                 value={foodForm.calories} 
                                 onChange={e => setFoodForm({...foodForm, calories: e.target.value})} 
                             />
                         </div>
 
-                        <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:scale-[1.02] active:scale-95 transition-all mt-2">
-                            Add Entry
+                        <button 
+                            type="submit" 
+                            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:scale-[1.02] active:scale-95 transition-all mt-2"
+                        >
+                            Log Entry
                         </button>
                     </form>
                 </motion.div>
@@ -295,26 +278,16 @@ export default function Nutrition() {
   );
 }
 
-// 🧩 Helper Component: Macro Ring
-function MacroRing({ label, percent, color, amount }) {
+function MacroBar({ label, val, color, percent }) {
     return (
-        <div className="flex flex-col items-center">
-             <div className="relative w-16 h-16 md:w-20 md:h-20 mb-2">
-                <svg className="w-full h-full -rotate-90">
-                    <circle cx="50%" cy="50%" r="40%" stroke="#f1f5f9" strokeWidth="6" fill="none" />
-                    <circle 
-                        cx="50%" cy="50%" r="40%" 
-                        stroke={color} strokeWidth="6" fill="none" 
-                        strokeDasharray="100" strokeDashoffset={100 - percent} 
-                        strokeLinecap="round" 
-                    />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center font-bold text-xs text-slate-600">
-                    {Math.round(percent)}%
-                </div>
+        <div>
+            <div className="flex justify-between text-xs font-bold text-slate-400 mb-1">
+                <span>{label}</span>
+                <span className="text-white">{val}</span>
             </div>
-            <p className="text-xs font-bold text-slate-500 uppercase">{label}</p>
-            <p className="text-[10px] text-slate-400">{amount}</p>
+            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${color}`} style={{ width: `${percent}%` }}></div>
+            </div>
         </div>
     );
 }
