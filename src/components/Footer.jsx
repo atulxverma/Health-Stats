@@ -14,7 +14,7 @@ export default function Footer() {
               <div className="bg-indigo-600 w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-200">
                 H
               </div>
-              <span className="font-bold text-xl text-slate-800">HealthTracker</span>
+              <span className="font-bold text-xl text-slate-800">HealthStats</span>
             </Link>
             <p className="text-slate-500 text-sm leading-relaxed">
               The AI-powered operating system for your biological data. Track, analyze, and optimize your life.
@@ -57,7 +57,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-slate-400 text-sm">
-            © {new Date().getFullYear()} HealthTracker Inc. All rights reserved.
+            © {new Date().getFullYear()} HealthStats Inc. All rights reserved.
           </p>
           
           <div className="flex items-center gap-6">

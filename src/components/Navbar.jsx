@@ -71,7 +71,9 @@ export default function Navbar() {
       </nav>
 
       {/* MOBILE NAV */}
-      <div className="md:hidden fixed bottom-4 left-4 right-4 bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl flex justify-around p-2 z-50">
+            {/* MOBILE NAV (Fix for iPhones/Modern Androids) */}
+      <div className="md:hidden fixed bottom-6 left-4 right-4 bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl flex justify-around p-3 z-50 pb-safe">
+        {/* pb-safe is a tailwind utility if configured, else bottom-6 lifts it up */}
         <NavItem to="/" icon={Home} />
         {isSignedIn && <NavItem to="/dashboard" icon={LayoutDashboard} />}
         {isSignedIn && <NavItem to="/workouts" icon={Dumbbell} />}

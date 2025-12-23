@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUserData } from "../context/UserDataContext";
 import { useUser } from "@clerk/clerk-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +21,16 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("goals");
   const [form, setForm] = useState(goals);
   const [isSaved, setIsSaved] = useState(false);
+  const[localData , setLocalData] = useState(goals);
+
+  useEffect(()=>{
+    setLocalData(goals);
+  }, [goals])
+
+  const handleSave = () => {
+    updateGoals(localData)
+    toast.success("Success")
+  }
 
   const saveGoals = () => {
     updateGoals(form);
