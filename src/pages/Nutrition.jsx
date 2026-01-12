@@ -1,59 +1,54 @@
 import { useState } from "react";
-import { useUserData } from "../context/UserDataContext";
+import { useHealthStore } from "../store/useHealthStore";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { 
   Plus, 
   X, 
-  Droplets, 
+  Droplet, 
   Flame, 
   Utensils, 
-  ChevronRight,
-  Coffee,
-  Sun,
-  Moon,
+  Coffee, 
+  Sun, 
+  Moon, 
   Cookie
 } from "lucide-react";
 
 export default function Nutrition() {
-  const { dailyStats, updateDailyStats, goals } = useUserData();
+  // ✅ DATA FETCHING (Only from Store)
+  const { dailyStats, addWater, addMeal, goals, meals } = useHealthStore();
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeMealType, setActiveMealType] = useState("Breakfast");
   const [foodForm, setFoodForm] = useState({ name: "", calories: "" });
-  const [mealsLog, setMealsLog] = useState([]);
 
   // --- ACTIONS ---
-  const addWater = (amount) => {
-    const currentWater = Number(dailyStats.water) || 0;
-    updateDailyStats({ water: currentWater + amount });
-    toast.success(amount > 300 ? "Hydration Boost! 💧" : "Sip Added 💧");
+  const handleAddWater = (amount) => {
+    addWater(amount);
+    toast.success(`Hydration +${amount}ml`);
   };
 
   const handleAddFood = (e) => {
     e.preventDefault();
     if (!foodForm.name || !foodForm.calories) return;
 
-    const currentCals = Number(dailyStats.calories) || 0;
-    const formCals = Number(foodForm.calories);
-
-    updateDailyStats({ calories: currentCals + formCals });
-
-    setMealsLog([{
+    // Store handles the logic (updating calories + adding to list)
+    addMeal({
       id: Date.now(),
       type: activeMealType,
       name: foodForm.name,
-      calories: formCals,
+      calories: Number(foodForm.calories),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }, ...mealsLog]);
+    });
 
     toast.success(`${activeMealType} logged`);
     setFoodForm({ name: "", calories: "" });
     setIsModalOpen(false);
   };
 
-  // Calculations
-  const waterPercent = Math.min((Number(dailyStats.water) / (goals.waterGoal || 1)) * 100, 100);
-  const caloriePercent = Math.min((Number(dailyStats.calories) / (goals.caloriesGoal || 1)) * 100, 100);
+  // Safe Math to prevent NaN
+  const waterPercent = Math.min((Number(dailyStats.water || 0) / (goals.waterGoal || 1)) * 100, 100);
+  const caloriePercent = Math.min((Number(dailyStats.calories || 0) / (goals.caloriesGoal || 1)) * 100, 100);
 
   const getMealIcon = (type) => {
     if (type === "Breakfast") return <Coffee size={18} />;
@@ -63,16 +58,15 @@ export default function Nutrition() {
   };
 
   return (
-    <div className="container mx-auto max-w-6xl">
+    <div className="container mx-auto max-w-6xl relative">
       
-      {/* 1. HEADER (Button Removed) */}
+      {/* 1. HEADER */}
       <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Nutrition</h1>
           <p className="text-slate-500 mt-1">Track your fuel and hydration.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start"> 
-        {/* Added 'items-start' to prevent stretching height */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
         {/* === LEFT: MAIN STATS (Bento) === */}
         <div className="lg:col-span-2 space-y-6">
@@ -92,6 +86,7 @@ export default function Nutrition() {
                             <span className="text-slate-400 font-medium">/ {goals.caloriesGoal} kcal</span>
                         </div>
                     </div>
+                    {/* Radial Progress */}
                     <div className="relative w-24 h-24">
                         <svg className="w-full h-full -rotate-90">
                             <circle cx="50%" cy="50%" r="40%" stroke="#334155" strokeWidth="8" fill="none" />
@@ -125,7 +120,8 @@ export default function Nutrition() {
 
                 <div className="space-y-6">
                     {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((type) => {
-                        const items = mealsLog.filter(m => m.type === type);
+                        const items = meals.filter(m => m.type === type);
+                        
                         return (
                             <div key={type}>
                                 <div className="flex justify-between items-center mb-3 px-2">
@@ -167,19 +163,19 @@ export default function Nutrition() {
             </div>
         </div>
 
-        {/* === RIGHT: HYDRATION (Sticky & Fixed Height) === */}
-        <div className="lg:col-span-1 sticky top-24"> 
-            {/* Added 'sticky top-24' so it follows scroll but doesn't grow */}
+        {/* === RIGHT: HYDRATION (Fixed Height) === */}
+        <div className="lg:col-span-1 sticky top-24">
             <div className="bg-white p-2 rounded-[2.5rem] border border-slate-100 shadow-xl h-[600px] flex flex-col">
                 <div className="bg-blue-50 rounded-[2rem] flex-grow p-6 flex flex-col relative overflow-hidden">
                     
                     <div className="flex items-center justify-between mb-6 relative z-10">
                         <h3 className="font-bold text-blue-900 text-lg flex items-center gap-2">
-                            <Droplets size={20} fill="currentColor" /> Hydration
+                            <Droplet size={20} fill="currentColor" /> Hydration
                         </h3>
                         <span className="text-xs font-bold text-blue-400 uppercase">{goals.waterGoal}ml Goal</span>
                     </div>
 
+                    {/* Water Visual */}
                     <div className="relative flex-grow flex items-center justify-center my-4">
                         <div className="relative w-32 h-64 bg-white/40 border-4 border-white rounded-[3rem] overflow-hidden shadow-inner">
                             <motion.div 
@@ -197,10 +193,10 @@ export default function Nutrition() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 mt-auto relative z-10">
-                        <button onClick={() => addWater(250)} className="bg-white hover:bg-blue-100 py-3 rounded-xl font-bold text-sm text-blue-600 transition-all shadow-sm">
+                        <button onClick={() => handleAddWater(250)} className="bg-white hover:bg-blue-100 py-3 rounded-xl font-bold text-sm text-blue-600 transition-all shadow-sm">
                             + 250ml
                         </button>
-                        <button onClick={() => addWater(500)} className="bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-bold text-sm text-white transition-all shadow-md">
+                        <button onClick={() => handleAddWater(500)} className="bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-bold text-sm text-white transition-all shadow-md">
                             + 500ml
                         </button>
                     </div>
@@ -213,13 +209,7 @@ export default function Nutrition() {
       {/* MODAL */}
       <AnimatePresence>
         {isModalOpen && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-                <motion.div 
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    onClick={() => setIsModalOpen(false)}
-                    className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-                ></motion.div>
-
+            <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm">
                 <motion.div 
                     initial={{ scale: 0.95, opacity: 0, y: 20 }} 
                     animate={{ scale: 1, opacity: 1, y: 0 }} 
@@ -262,10 +252,7 @@ export default function Nutrition() {
                             />
                         </div>
 
-                        <button 
-                            type="submit" 
-                            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:scale-[1.02] active:scale-95 transition-all mt-2"
-                        >
+                        <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:scale-[1.02] active:scale-95 transition-all mt-2">
                             Log Entry
                         </button>
                     </form>
@@ -278,6 +265,7 @@ export default function Nutrition() {
   );
 }
 
+// 🧩 Helper Component
 function MacroBar({ label, val, color, percent }) {
     return (
         <div>

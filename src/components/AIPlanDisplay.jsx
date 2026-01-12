@@ -3,143 +3,138 @@ import { useHealthStore } from "../store/useHealthStore";
 import { useUserData } from "../context/UserDataContext";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { Sparkles, Utensils, Dumbbell, Clock, Flame, CheckCircle2 } from "lucide-react";
+import { 
+    Sparkles, Utensils, Dumbbell, Clock, Flame, 
+    CheckCircle2, Circle, ArrowRight 
+} from "lucide-react";
 
 export default function AIPlanDisplay() {
-  const { weeklyPlan, isLoading } = useHealthStore();
-  const { updateDailyStats, dailyStats } = useUserData();
-  
-  // Track which items are completed locally
+  const { weeklyPlan, addMeal } = useHealthStore();
   const [completedItems, setCompletedItems] = useState([]);
 
-  // --- HANDLE COMPLETION ---
+  // --- INTERACTION LOGIC ---
   const handleComplete = (item, category) => {
-    // 1. Check if already done
     if (completedItems.includes(item.name)) return;
 
-    // 2. Add to stats
     if (category === 'meal') {
-        updateDailyStats({ calories: dailyStats.calories + Number(item.calories) });
-        toast.success(`Logged ${item.calories} kcal! 🥗`);
+        // Log to database/store automatically
+        addMeal({
+            name: item.name,
+            calories: Number(item.calories),
+            type: item.type,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+        toast.success(`Logged ${item.name}!`, {
+            style: { background: '#10B981', color: '#fff' }
+        });
     } else {
-        // Workout logic (Optional: add calorie burn if you want)
-        toast.success("Workout Completed! 💪");
+        toast.success("Workout Marked Complete!", {
+            style: { background: '#3B82F6', color: '#fff' }
+        });
     }
 
-    // 3. Mark as done visually
     setCompletedItems([...completedItems, item.name]);
   };
 
-  if (isLoading) return null; // Parent component handles loading UI
   if (!weeklyPlan) return null;
 
   return (
-    <div className="space-y-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       
-      {/* MOTIVATION BANNER */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-indigo-600 to-violet-600 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden"
-      >
-        <div className="relative z-10">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-                <Sparkles className="text-yellow-300" /> Today's AI Focus
-            </h2>
-            <p className="text-indigo-100 mt-2 text-lg italic">"{weeklyPlan.summary}"</p>
-        </div>
-        <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-10 translate-y-10">
-            <Dumbbell size={150} />
-        </div>
-      </motion.div>
+      {/* LEFT: TODAY'S FOCUS (Motivation) */}
+      <div className="lg:col-span-4 space-y-6">
+          <div className="bg-slate-900 text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden">
+              <div className="relative z-10">
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-6">
+                      <Sparkles className="text-yellow-400" />
+                  </div>
+                  <h2 className="text-2xl font-bold mb-2">Today's Focus</h2>
+                  <p className="text-slate-300 text-lg leading-relaxed">"{weeklyPlan.summary}"</p>
+              </div>
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/30 rounded-full blur-[60px]"></div>
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* DIET PLAN */}
-          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-              <h3 className="font-bold text-slate-800 text-xl mb-6 flex items-center gap-2">
-                  <Utensils className="text-orange-500" /> Nutrition Plan
-              </h3>
+          <div className="bg-blue-600 text-white p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between h-64 relative overflow-hidden">
+              <div className="relative z-10">
+                  <h3 className="font-bold text-blue-100 uppercase text-xs tracking-widest mb-1">Training</h3>
+                  <h2 className="text-2xl font-bold">{weeklyPlan.workout.type}</h2>
+                  <div className="flex gap-3 mt-4">
+                      <span className="bg-white/20 px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1"><Clock size={14}/> {weeklyPlan.workout.duration}</span>
+                      <span className="bg-white/20 px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1"><Flame size={14}/> High</span>
+                  </div>
+              </div>
+              
+              {/* Workout List */}
+              <div className="relative z-10 space-y-2">
+                  {weeklyPlan.workout.exercises.map((ex, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-blue-100">
+                          <CheckCircle2 size={16} className="opacity-50" /> {ex}
+                      </div>
+                  ))}
+              </div>
+              <Dumbbell className="absolute -bottom-6 -right-6 text-blue-500 opacity-50" size={140} />
+          </div>
+      </div>
+
+      {/* RIGHT: INTERACTIVE CHECKLIST (Diet) */}
+      <div className="lg:col-span-8">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm h-full">
+              <div className="flex items-center justify-between mb-8">
+                  <h3 className="font-bold text-slate-800 text-2xl flex items-center gap-3">
+                      <Utensils className="text-orange-500" /> Nutrition Roadmap
+                  </h3>
+                  <span className="text-xs font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">3 Meals</span>
+              </div>
+
               <div className="space-y-4">
                   {weeklyPlan.meals.map((meal, index) => {
                       const isDone = completedItems.includes(meal.name);
+                      
                       return (
-                        <div 
+                        <motion.div 
+                            layout
                             key={index} 
-                            onClick={() => handleComplete(meal, 'meal')}
-                            className={`flex items-start gap-4 p-4 rounded-2xl border transition-all cursor-pointer ${
+                            onClick={() => !isDone && handleComplete(meal, 'meal')}
+                            className={`group flex items-center gap-6 p-6 rounded-[2rem] border-2 transition-all cursor-pointer ${
                                 isDone 
-                                ? 'bg-slate-50 border-slate-100 opacity-60 grayscale' 
-                                : 'bg-white border-indigo-50 hover:border-indigo-200 hover:shadow-md'
+                                ? 'bg-slate-50 border-transparent opacity-60' 
+                                : 'bg-white border-slate-100 hover:border-indigo-600 hover:shadow-lg hover:shadow-indigo-100'
                             }`}
                         >
-                            <div className="bg-white p-3 rounded-xl shadow-sm text-2xl">
-                                {isDone ? '✅' : (meal.type === 'Breakfast' ? '🍳' : meal.type === 'Lunch' ? '🥗' : '🍲')}
+                            {/* Icon */}
+                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-sm transition-colors ${
+                                isDone ? 'bg-slate-200 grayscale' : 'bg-orange-50'
+                            }`}>
+                                {meal.type === 'Breakfast' ? '🍳' : meal.type === 'Lunch' ? '🥗' : '🍲'}
                             </div>
+
+                            {/* Content */}
                             <div className="flex-grow">
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center mb-1">
                                     <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide">{meal.type}</p>
-                                    {isDone && <span className="text-xs font-bold text-green-600">COMPLETED</span>}
+                                    {isDone && <span className="text-xs font-bold text-emerald-600 flex items-center gap-1"><CheckCircle2 size={12}/> DONE</span>}
                                 </div>
-                                <h4 className={`font-bold ${isDone ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{meal.name}</h4>
-                                <p className="text-xs text-slate-500 mt-1 flex gap-3">
-                                    <span>🔥 {meal.calories} kcal</span>
-                                    <span>🥩 {meal.protein} protein</span>
+                                <h4 className={`text-lg font-bold ${isDone ? 'text-slate-500 line-through' : 'text-slate-900'}`}>{meal.name}</h4>
+                                <p className="text-sm text-slate-500 mt-1 font-medium">
+                                    {meal.calories} kcal • {meal.protein} protein
                                 </p>
                             </div>
-                            {!isDone && (
-                                <button className="p-2 rounded-full hover:bg-indigo-50 text-indigo-300 hover:text-indigo-600">
-                                    <CheckCircle2 size={20} />
-                                </button>
-                            )}
-                        </div>
-                      )
-                  })}
-              </div>
-          </div>
 
-          {/* WORKOUT PLAN */}
-          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-              <h3 className="font-bold text-slate-800 text-xl mb-6 flex items-center gap-2">
-                  <Dumbbell className="text-blue-500" /> Workout Routine
-              </h3>
-              
-              <div className="bg-blue-50 p-5 rounded-2xl mb-6 border border-blue-100">
-                  <div className="flex justify-between items-center mb-2">
-                      <h4 className="font-bold text-blue-900 text-lg">{weeklyPlan.workout.type}</h4>
-                      <span className="bg-white text-blue-600 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                          {weeklyPlan.workout.duration}
-                      </span>
-                  </div>
-                  <div className="flex gap-2 text-sm text-blue-700">
-                      <span className="flex items-center gap-1"><Clock size={14}/> Duration</span>
-                      <span className="flex items-center gap-1"><Flame size={14}/> High Burn</span>
-                  </div>
-              </div>
-
-              <div className="space-y-3">
-                  {weeklyPlan.workout.exercises.map((ex, index) => {
-                      const isDone = completedItems.includes(ex);
-                      return (
-                        <div 
-                            key={index} 
-                            onClick={() => handleComplete({ name: ex }, 'workout')}
-                            className={`flex items-center gap-3 p-3 rounded-xl transition-colors cursor-pointer ${
-                                isDone ? 'bg-slate-100 text-slate-400 line-through' : 'hover:bg-slate-50 text-slate-700'
-                            }`}
-                        >
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                                isDone ? 'bg-slate-300 text-white' : 'bg-slate-900 text-white'
+                            {/* Checkbox Action */}
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                                isDone 
+                                ? 'bg-emerald-500 text-white' 
+                                : 'bg-slate-100 text-slate-300 group-hover:bg-indigo-600 group-hover:text-white'
                             }`}>
-                                {isDone ? '✓' : index + 1}
+                                {isDone ? <CheckCircle2 size={20} /> : <ArrowRight size={20} />}
                             </div>
-                            <p className="font-medium">{ex}</p>
-                        </div>
+                        </motion.div>
                       )
                   })}
               </div>
           </div>
-
       </div>
+
     </div>
   );
 }

@@ -1,82 +1,121 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-// ⚠️ API KEY KI ZAROORAT NAHI HAI ABHI
-// Hum local logic use karenge taaki app ruke nahi.
+// TERI KEY
+const API_KEY = "AIzaSyC0mFYEEoaiI04r4p4K1ezD9CTtylhsUtM";
 
 export const useHealthStore = create(
   persist(
     (set, get) => ({
       
+      // ... (State same rahega) ...
       userProfile: null,
       weeklyPlan: null,
+      dailyStats: { steps: 2500, water: 0, calories: 0 },
+      goals: { stepsGoal: 8000, waterGoal: 3000, caloriesGoal: 2000 },
+      workouts: [],
+      meals: [],
       isLoading: false,
       error: null,
 
-      setProfile: (profileData) => set({ userProfile: profileData }),
+      setProfile: (data) => set({ userProfile: data }),
+      updateGoals: (newGoals) => set((state) => ({ goals: { ...state.goals, ...newGoals } })),
+      addWater: (amount) => set((state) => ({ dailyStats: { ...state.dailyStats, water: (state.dailyStats.water || 0) + amount } })),
+      deleteWorkout: (id) => set((state) => ({ workouts: state.workouts.filter((w) => w.id !== id) })),
+      addWorkout: (workout) => set((state) => {
+        const newCalories = (state.dailyStats.calories || 0) + Number(workout.calories);
+        return { workouts: [workout, ...state.workouts], dailyStats: { ...state.dailyStats, calories: newCalories } };
+      }),
+      addMeal: (meal) => set((state) => {
+        const newCalories = (state.dailyStats.calories || 0) + Number(meal.calories);
+        return { meals: [meal, ...state.meals], dailyStats: { ...state.dailyStats, calories: newCalories } };
+      }),
 
+      // --- 🧠 AI LOGIC (DIRECT FETCH - NO SDK) ---
       generatePlan: async () => {
         const { userProfile } = get();
         if (!userProfile) return;
 
         set({ isLoading: true, error: null });
 
-        // --- MOCK AI SIMULATION (Fake Delay to feel like AI) ---
-        setTimeout(() => {
+        try {
+          console.log("🔵 Calling Gemini via Fetch...");
+
+          const prompt = `
+            Act as a fitness coach. Create a 1-day JSON plan for:
+            ${userProfile.gender}, ${userProfile.age}yrs, ${userProfile.weight}kg, Goal: ${userProfile.goal}, Diet: ${userProfile.dietType}.
             
-            // 1. Logic based on User Input
-            const isVeg = userProfile.dietType === 'Vegetarian' || userProfile.dietType === 'Vegan';
-            const isMuscle = userProfile.goal === 'Build Muscle';
-            
-            // 2. Dynamic Data Construction
-            const plan = {
-                summary: isMuscle 
-                    ? `Focus on hypertrophy! Since you are ${userProfile.dietType}, we increased your protein intake.`
-                    : `Time to shred! We kept your carbs low to help you with ${userProfile.goal}.`,
-                
+            Return ONLY strict JSON (No markdown):
+            {
+              "summary": "Short motivation.",
+              "meals": [
+                { "type": "Breakfast", "name": "Food Name", "calories": 350, "protein": "15g" },
+                { "type": "Lunch", "name": "Food Name", "calories": 550, "protein": "25g" },
+                { "type": "Dinner", "name": "Food Name", "calories": 450, "protein": "20g" }
+              ],
+              "workout": {
+                "type": "Workout Name",
+                "duration": "45 min",
+                "exercises": ["Ex 1", "Ex 2", "Ex 3"]
+              }
+            }
+          `;
+
+          // DIRECT API CALL (Bypasses SDK issues)
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+              })
+            }
+          );
+
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(`API Error: ${errData.error?.message || response.statusText}`);
+          }
+
+          const data = await response.json();
+          const text = data.candidates[0].content.parts[0].text;
+          
+          console.log("🔹 AI Response:", text);
+
+          // Clean JSON
+          const cleanJson = text.replace(/```json|```/g, '').trim();
+          const start = cleanJson.indexOf('{');
+          const end = cleanJson.lastIndexOf('}');
+          const plan = JSON.parse(cleanJson.substring(start, end + 1));
+
+          set({ weeklyPlan: plan, isLoading: false });
+          console.log("✅ AI Success!");
+
+        } catch (err) {
+          console.error("❌ AI Error:", err);
+          
+          // Fallback Plan
+          const isVeg = userProfile.dietType === 'Vegetarian';
+          set({ 
+            weeklyPlan: {
+                summary: "🔴 AI Connection Failed. Using Offline Plan.",
                 meals: [
-                    { 
-                        type: "Breakfast", 
-                        name: isVeg ? "Oatmeal with Almonds & Banana" : "3 Boiled Eggs & Toast", 
-                        calories: 350, 
-                        protein: isVeg ? "12g" : "20g" 
-                    },
-                    { 
-                        type: "Lunch", 
-                        name: isVeg ? "Paneer/Tofu Salad & Brown Rice" : "Grilled Chicken Breast & Quinoa", 
-                        calories: 550, 
-                        protein: isVeg ? "18g" : "35g" 
-                    },
-                    { 
-                        type: "Dinner", 
-                        name: isVeg ? "Lentil Soup (Dal) & Veggies" : "Baked Fish with Asparagus", 
-                        calories: 400, 
-                        protein: isVeg ? "14g" : "28g" 
-                    }
+                    { type: "Breakfast", name: isVeg ? "Oats" : "Eggs", calories: 400, protein: "15g" },
+                    { type: "Lunch", name: "Rice & Dal", calories: 600, protein: "20g" },
+                    { type: "Dinner", name: "Salad", calories: 400, protein: "10g" }
                 ],
-                
-                workout: {
-                    type: isMuscle ? "Hypertrophy Strength" : "HIIT Cardio Burn",
-                    duration: isMuscle ? "60 min" : "45 min",
-                    exercises: isMuscle 
-                        ? ["Bench Press (3x10)", "Squats (3x12)", "Deadlifts (3x8)"] 
-                        : ["Burpees (30s)", "Mountain Climbers (30s)", "Jump Rope (1 min)"]
-                }
-            };
-
-            // 3. Save "AI" Result
-            set({ weeklyPlan: plan, isLoading: false });
-            console.log("✅ Mock Plan Generated based on:", userProfile.goal);
-
-        }, 2500); // 2.5 Seconds ka delay taaki user ko lage AI soch raha hai
+                workout: { type: "Home Workout", duration: "30 min", exercises: ["Pushups", "Squats"] }
+            }, 
+            isLoading: false 
+          });
+        }
       },
       
       reset: () => {
-        set({ userProfile: null, weeklyPlan: null });
+        set({ userProfile: null, weeklyPlan: null, dailyStats: { steps: 0, water: 0, calories: 0 }, workouts: [], meals: [] });
         localStorage.removeItem('health-storage');
-        window.location.reload();
       }
-
     }),
     {
       name: 'health-storage',

@@ -1,5 +1,5 @@
 import React from "react";
-import { useUserData } from "../context/UserDataContext";
+import { useHealthStore } from "../store/useHealthStore"; // ✅ ZUSTAND IMPORT
 import { motion } from "framer-motion";
 import { 
   AreaChart, 
@@ -20,10 +20,8 @@ import {
   Flame 
 } from "lucide-react";
 
-import StatCard from "../components/StatCard";
-import ChartCard from "../components/ChartCard";
-
-// --- MOCK DATA FOR CHARTS ---
+// --- MOCK DATA FOR CHARTS (Visuals only) ---
+// Since we don't have 7 days of history in LocalStorage yet
 const weeklyData = [
   { day: "Mon", steps: 4000, calories: 1800, score: 65 },
   { day: "Tue", steps: 7500, calories: 2200, score: 80 },
@@ -35,7 +33,17 @@ const weeklyData = [
 ];
 
 export default function Progress() {
-  const { dailyStats } = useUserData();
+  // ✅ GET REAL DATA FROM ZUSTAND
+  const { dailyStats, goals } = useHealthStore();
+
+  // Safe Fallbacks
+  const currentSteps = Number(dailyStats?.steps) || 0;
+  const currentCalories = Number(dailyStats?.calories) || 0;
+  
+  // Calculate Activity Score (0-100)
+  const stepScore = Math.min((currentSteps / (goals?.stepsGoal || 8000)) * 100, 100);
+  const calScore = Math.min((currentCalories / (goals?.caloriesGoal || 2000)) * 100, 100);
+  const totalScore = Math.round((stepScore + calScore) / 2);
 
   // Custom Tooltip for Recharts
   const CustomTooltip = ({ active, payload, label }) => {
@@ -69,27 +77,27 @@ export default function Progress() {
         </div>
       </div>
 
-      {/* 1. TOP METRICS GRID */}
+      {/* 1. TOP METRICS GRID (REAL DATA) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard 
-            title="Avg Steps" 
-            value="7,840" 
-            unit="steps/day" 
+            title="Total Steps" 
+            value={currentSteps.toLocaleString()} 
+            unit="steps" 
             icon={Footprints} 
             color="bg-blue-500" 
             trend={12} 
         />
         <StatCard 
-            title="Avg Burn" 
-            value="2,150" 
-            unit="kcal/day" 
+            title="Total Burn" 
+            value={currentCalories.toLocaleString()} 
+            unit="kcal" 
             icon={Flame} 
             color="bg-orange-500" 
             trend={-5} 
         />
         <StatCard 
             title="Activity Score" 
-            value="82" 
+            value={totalScore} 
             unit="/ 100" 
             icon={Activity} 
             color="bg-indigo-500" 
@@ -197,3 +205,47 @@ export default function Progress() {
     </div>
   );
 }
+
+// --- HELPER COMPONENTS (Inline to prevent import errors) ---
+
+const StatCard = ({ title, value, unit, icon: Icon, color, trend }) => {
+  return (
+    <motion.div 
+      whileHover={{ y: -5 }}
+      className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between h-full"
+    >
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-3 rounded-2xl text-white shadow-md ${color}`}>
+          <Icon size={24} />
+        </div>
+        {trend && (
+          <div className={`text-xs font-bold px-2 py-1 rounded-full ${trend > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+            {trend > 0 ? '+' : ''}{trend}%
+          </div>
+        )}
+      </div>
+      
+      <div>
+        <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">{title}</p>
+        <div className="flex items-baseline gap-1">
+          <h3 className="text-3xl font-black text-slate-900">{value}</h3>
+          <span className="text-sm font-medium text-slate-400">{unit}</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const ChartCard = ({ title, subtitle, children }) => {
+  return (
+    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm h-full">
+      <div className="mb-6">
+        <h3 className="text-xl font-bold text-slate-900">{title}</h3>
+        {subtitle && <p className="text-sm text-slate-500 font-medium">{subtitle}</p>}
+      </div>
+      <div className="w-full h-[300px]">
+        {children}
+      </div>
+    </div>
+  );
+};

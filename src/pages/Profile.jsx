@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useUserData } from "../context/UserDataContext";
+import { useHealthStore } from "../store/useHealthStore"; // ✅ ZUSTAND IMPORT
 import { useUser } from "@clerk/clerk-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { 
   User, 
@@ -16,28 +16,33 @@ import {
 } from "lucide-react";
 
 export default function Profile() {
-  const { goals, updateGoals, dailyStats } = useUserData();
+  // ✅ GET DATA FROM STORE
+  const { goals, updateGoals, dailyStats } = useHealthStore();
+  
   const { user, signOut } = useUser();
   const [activeTab, setActiveTab] = useState("goals");
-  const [form, setForm] = useState(goals);
   const [isSaved, setIsSaved] = useState(false);
-  const[localData , setLocalData] = useState(goals);
 
-  useEffect(()=>{
-    setLocalData(goals);
-  }, [goals])
+  // Local Form State
+  const [form, setForm] = useState(goals);
 
-  const handleSave = () => {
-    updateGoals(localData)
-    toast.success("Success")
-  }
+  // Sync with store when it loads
+  useEffect(() => {
+    if (goals) {
+      setForm(goals);
+    }
+  }, [goals]);
 
+  // Save Function
   const saveGoals = () => {
     updateGoals(form);
     setIsSaved(true);
-    toast.success("Preferences updated!");
+    toast.success("Goals updated successfully! 🚀");
     setTimeout(() => setIsSaved(false), 2000);
   };
+
+  // Safe fallback for dailyStats to prevent crashes
+  const safeStats = dailyStats || { steps: 0, water: 0, calories: 0 };
 
   return (
     <div className="container mx-auto max-w-6xl">
@@ -63,7 +68,7 @@ export default function Profile() {
                         className="w-16 h-16 rounded-2xl border-2 border-white/20 shadow-md" 
                     />
                     <div>
-                        <h2 className="font-bold text-xl">{user?.fullName}</h2>
+                        <h2 className="font-bold text-xl">{user?.fullName || "Guest User"}</h2>
                         <span className="text-xs font-bold bg-white/20 px-2 py-1 rounded-lg flex items-center gap-1 w-fit mt-1">
                             <Crown size={12} /> PRO MEMBER
                         </span>
@@ -73,7 +78,9 @@ export default function Profile() {
                 <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-6">
                     <div>
                         <p className="text-indigo-200 text-xs font-bold uppercase">Join Date</p>
-                        <p className="font-medium">Oct 2023</p>
+                        <p className="font-medium">
+                          {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                        </p>
                     </div>
                     <div>
                         <p className="text-indigo-200 text-xs font-bold uppercase">Status</p>
@@ -173,16 +180,16 @@ export default function Profile() {
                         {/* Summary Stats */}
                         <div className="grid grid-cols-3 gap-4 mt-10 pt-10 border-t border-slate-100">
                             <div className="text-center">
-                                <p className="text-xs font-bold text-slate-400 uppercase">Lifetime Steps</p>
-                                <p className="text-2xl font-black text-slate-800">124k</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase">Today's Steps</p>
+                                <p className="text-2xl font-black text-slate-800">{safeStats.steps}</p>
                             </div>
                             <div className="text-center border-l border-slate-100">
-                                <p className="text-xs font-bold text-slate-400 uppercase">Avg Sleep</p>
-                                <p className="text-2xl font-black text-slate-800">7h 12m</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase">Water Drank</p>
+                                <p className="text-2xl font-black text-slate-800">{safeStats.water}ml</p>
                             </div>
                             <div className="text-center border-l border-slate-100">
-                                <p className="text-xs font-bold text-slate-400 uppercase">Workouts</p>
-                                <p className="text-2xl font-black text-slate-800">42</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase">Calories</p>
+                                <p className="text-2xl font-black text-slate-800">{safeStats.calories}</p>
                             </div>
                         </div>
                     </motion.div>
@@ -195,7 +202,9 @@ export default function Profile() {
                         </div>
                         <h3 className="text-xl font-bold text-slate-800">Account Settings</h3>
                         <p className="text-slate-500 max-w-xs mx-auto mt-2">Update your email, password, and profile details via Clerk.</p>
-                        <button className="mt-6 px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm">Manage Clerk Account</button>
+                        <div className="mt-6 p-4 bg-slate-100 rounded-xl text-xs font-mono text-slate-500">
+                            User ID: {user?.id}
+                        </div>
                     </motion.div>
                 )}
 
@@ -248,16 +257,15 @@ function GoalSlider({ label, value, max, unit, onChange, color }) {
 function ToggleItem({ label, desc, defaultChecked }) {
     const [checked, setChecked] = useState(defaultChecked || false);
     return (
-        <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-colors">
+        <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setChecked(!checked)}>
             <div>
                 <p className="font-bold text-slate-800">{label}</p>
                 <p className="text-xs text-slate-500">{desc}</p>
             </div>
             <button 
-                onClick={() => setChecked(!checked)}
-                className={`w-12 h-7 rounded-full p-1 transition-colors ${checked ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 ${checked ? 'bg-indigo-600' : 'bg-slate-300'}`}
             >
-                <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-300 ${checked ? 'translate-x-5' : 'translate-x-0'}`}></div>
             </button>
         </div>
     );
