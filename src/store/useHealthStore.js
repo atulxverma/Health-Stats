@@ -27,12 +27,9 @@ export const useHealthStore = create(
 
       // ADD WORKOUT (Updates Calories)
       addWorkout: (workout) => set((state) => {
-        const burned = Number(workout.calories) || 0;
         return {
           workouts: [workout, ...state.workouts],
-          // Note: Usually burned calories are separate, but for UI simplicity we might add to dailyStats if that's the logic
-          // If you want 'Calories' on dashboard to be 'Burned', use this line:
-          // dailyStats: { ...state.dailyStats, calories: (state.dailyStats.calories || 0) + burned } 
+          // Optional: Add burned calories logic if needed
         };
       }),
 
@@ -69,7 +66,7 @@ export const useHealthStore = create(
 
       // --- SMART LOGIC GENERATOR (No Server Needed) ---
       generatePlan: async () => {
-        const { userProfile } = get();
+        const { userProfile, updateGoals } = get();
         if (!userProfile) return;
 
         set({ isLoading: true });
@@ -111,6 +108,17 @@ export const useHealthStore = create(
                 }
             };
 
+            // 🔥 NEW: Auto-Update Goals based on Plan
+            const totalPlanCalories = plan.meals.reduce((acc, meal) => acc + meal.calories, 0);
+            const recommendedSteps = isLoss ? 10000 : isMuscle ? 6000 : 8000;
+            const recommendedWater = 3500;
+
+            updateGoals({
+                caloriesGoal: totalPlanCalories,
+                stepsGoal: recommendedSteps,
+                waterGoal: recommendedWater
+            });
+
             set({ weeklyPlan: plan, isLoading: false });
         }, 1500);
       },
@@ -127,7 +135,6 @@ export const useHealthStore = create(
           window.location.reload();
       },
 
-      // Empty function to prevent crash if App.jsx calls it
       initializeUser: () => {} 
 
     }),
