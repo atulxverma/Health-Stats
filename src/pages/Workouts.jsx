@@ -15,10 +15,8 @@ export default function Workouts() {
   const [form, setForm] = useState({ name: "", duration: "", calories: "", intensity: "Medium" });
   const [searchTerm, setSearchTerm] = useState("");
   
-  // ✅ 1. NEW DATE PICKER STATE (Default: Today)
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD format
 
-  // --- STATS ---
   const totalSessions = workouts.length;
   const totalCalories = workouts.reduce((acc, curr) => acc + Number(curr.calories || 0), 0);
   const totalMinutes = workouts.reduce((acc, curr) => acc + Number(curr.duration || 0), 0);
@@ -29,7 +27,6 @@ export default function Workouts() {
     { name: 'High', value: workouts.filter(w => w.intensity === 'High').length, color: '#EF4444' },
   ].filter(d => d.value > 0);
 
-  // Weekly Goal (Current Week)
   const getWeeklyConsistency = () => {
     const now = new Date();
     const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
@@ -39,20 +36,10 @@ export default function Workouts() {
   };
   const activeDaysCount = getWeeklyConsistency();
   const consistencyPercent = Math.min((activeDaysCount / 5) * 100, 100);
-
-  // ✅ 2. FILTER LOGIC (Date Picker Based)
-  // Format filterDate (YYYY-MM-DD) to match stored format (MM/DD/YYYY) if needed, 
-  // BUT easier to just compare objects.
   
   const filteredWorkouts = workouts.filter(w => {
-      // Convert stored date (e.g. "10/24/2023") to comparable format
       const wDate = new Date(w.date).toISOString().split('T')[0];
-      const isDateMatch = filterDate ? wDate === filterDate : true; // If no date selected, show all? No, usually show selected.
-      
-      // Let's make it Month Filter by default or Specific Day? 
-      // User asked for "History according to calendar". Usually implies picking a date to see logs.
-      // Let's filter by MONTH of the selected date to keep the list populated, 
-      // or EXACT DATE if user wants. Let's do MONTH match to keep list full like previous.
+      const isDateMatch = filterDate ? wDate === filterDate : true;
       
       const selected = new Date(filterDate);
       const current = new Date(w.date);
@@ -61,8 +48,6 @@ export default function Workouts() {
       const matchesSearch = w.name.toLowerCase().includes(searchTerm.toLowerCase());
       return isSameMonth && matchesSearch;
   }).reverse();
-
-  // --- HANDLERS ---
 
   const handleAdd = (e) => {
     e.preventDefault();
@@ -77,11 +62,9 @@ export default function Workouts() {
     toast.success("Workout Recorded! 🔥");
   };
 
-  // ✅ 3. FIXED AI LOGGING (Correct Time & Cal)
   const logAIWorkout = () => {
       if(!weeklyPlan) return;
-      
-      // Parse duration string "45 min" -> 45
+    
       const dur = parseInt(weeklyPlan.workout.duration) || 45; 
       
       addWorkout({
@@ -89,7 +72,7 @@ export default function Workouts() {
           date: new Date().toLocaleDateString('en-US'),
           name: weeklyPlan.workout.type, 
           duration: dur, 
-          calories: 350, // AI plan doesn't give cals for workout, keep default or estimate
+          calories: 350,
           intensity: "High"
       });
       toast.success("AI Session Logged! 💪");
@@ -113,7 +96,6 @@ export default function Workouts() {
   return (
     <div className="container mx-auto max-w-7xl p-6">
       
-      {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
         <div>
             <h1 className="text-3xl font-bold text-slate-900">Activity Hub</h1>
@@ -140,10 +122,8 @@ export default function Workouts() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* === LEFT COLUMN === */}
         <div className="space-y-6">
             
-            {/* ✅ AI WORKOUT CARD (Shows ALL exercises) */}
             {weeklyPlan && (
                 <div className="bg-slate-900 text-white p-6 rounded-[2rem] shadow-xl relative overflow-hidden group">
                     <div className="relative z-10">
@@ -155,7 +135,6 @@ export default function Workouts() {
                         </div>
                         <h2 className="text-2xl font-bold mb-3">{weeklyPlan.workout.type}</h2>
                         
-                        {/* Show Full List of Exercises */}
                         <div className="flex flex-wrap gap-2 mb-4">
                             {weeklyPlan.workout.exercises.map((ex, i) => (
                                 <span key={i} className="text-xs bg-black/40 border border-white/10 px-2.5 py-1 rounded-md text-slate-300">
@@ -174,7 +153,6 @@ export default function Workouts() {
                 </div>
             )}
 
-            {/* WEEKLY GOAL */}
             <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2rem] p-8 text-white shadow-xl relative overflow-hidden">
                 <div className="relative z-10">
                     <div className="flex justify-between items-start mb-6">
@@ -187,7 +165,6 @@ export default function Workouts() {
                 <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
             </div>
 
-            {/* INTENSITY CHART */}
             <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm min-h-[250px] flex flex-col items-center justify-center relative">
                 <div className="w-full flex justify-between items-center mb-2"><h4 className="text-slate-800 font-bold">Intensity</h4><Activity size={18} className="text-slate-400"/></div>
                 {intensityData.length > 0 ? (
@@ -204,7 +181,6 @@ export default function Workouts() {
                 <div className="flex gap-3 mt-2">{intensityData.map((d) => (<div key={d.name} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }}></div>{d.name}</div>))}</div>
             </div>
 
-            {/* QUICK STATS */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white border border-slate-200 shadow-sm p-5 rounded-[2rem] flex flex-col justify-center items-center text-center"><Flame className="text-orange-500 mb-2" size={24} /><p className="text-2xl font-black text-slate-900">{totalCalories}</p><p className="text-xs font-bold text-slate-400 uppercase">Kcal Burned</p></div>
                 <div className="bg-white border border-slate-200 shadow-sm p-5 rounded-[2rem] flex flex-col justify-center items-center text-center"><Clock className="text-blue-500 mb-2" size={24} /><p className="text-2xl font-black text-slate-900">{Math.round(totalMinutes/60)}<span className="text-sm">h</span> {totalMinutes%60}<span className="text-sm">m</span></p><p className="text-xs font-bold text-slate-400 uppercase">Time Active</p></div>
@@ -212,16 +188,13 @@ export default function Workouts() {
         </div>
 
 
-        {/* === RIGHT COLUMN: HISTORY & LOGS === */}
         <div className="lg:col-span-2 space-y-6">
             
-            {/* ✅ 4. HISTORY HEADER WITH DATE PICKER */}
             <div className="flex items-center justify-between">
                 <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2">
                     <Calendar className="text-slate-400" size={20} /> History
                 </h3>
                 
-                {/* DATE PICKER INPUT (Standard HTML5 Picker) */}
                 <div className="relative">
                     <input 
                         type="date" 
@@ -232,7 +205,6 @@ export default function Workouts() {
                 </div>
             </div>
 
-            {/* THE LIST */}
             <div className="space-y-4">
                 {filteredWorkouts.length === 0 ? (
                     <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2rem] p-16 text-center">
@@ -270,7 +242,6 @@ export default function Workouts() {
         </div>
       </div>
 
-      {/* MODAL */}
       <AnimatePresence>
         {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/40 backdrop-blur-sm">
