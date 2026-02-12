@@ -59,6 +59,8 @@ export default function Footer() {
           <p className="text-slate-400 text-sm">
             © {new Date().getFullYear()} HealthStats Inc. All rights reserved.
           </p>
+
+          <div className="text-slate-600 text-xs pr-8">MADE BY <span className="font-bold text-orange-400">ATUL</span></div>
           
           <div className="flex items-center gap-6">
             <a href="#" className="text-slate-400 hover:text-indigo-600 transition-colors"><Twitter size={20} /></a>
